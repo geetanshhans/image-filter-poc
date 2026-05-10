@@ -1,0 +1,34 @@
+node_modules/
+dist/
+*.log
+.DS_Store
+.idea/
+.vscode/
+coverage/
+
+# Env files — never commit real secrets
+.env
+.env.local
+.env.production
+**/.env
+**/.env.local
+**/.env.production
+# Test env has only fake values, safe to commit
+!**/.env.test
+
+# Prisma
+apps/api/prisma/migrations/dev.db*
+
+# Model weights — downloaded by `npm run fetch-models`
+apps/api/models/
+
+# Build outputs
+apps/web/dist/
+apps/api/dist/
+packages/shared/dist/
+
+# Bun
+bun.lock
+
+# Claude Code
+.claude/

@@ -1,0 +1,61 @@
+// Prisma schema for Argon.
+// One table is enough for this scope. If we ever add users or batches, those
+// would be sibling models with FK relations.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// We mirror the shared TS enums here. Keeping them in sync is mechanical:
+// if you add a value in shared/status.ts, add it here and run a migration.
+enum ImageStatus {
+  PENDING_UPLOAD
+  PROCESSING
+  ACCEPTED
+  REJECTED
+}
+
+enum RejectionReason {
+  SIZE_TOO_SMALL
+  RESOLUTION_TOO_SMALL
+  INVALID_FORMAT
+  BLURRY
+  NO_FACE
+  MULTIPLE_FACES
+  FACE_TOO_SMALL
+  TOO_SIMILAR
+  PROCESSING_ERROR
+}
+
+model Image {
+  id              String           @id @default(uuid())
+  originalName    String
+  mimeType        String
+  sizeBytes       Int
+  width           Int?
+  height          Int?
+  // Where we wrote the original upload in S3.
+  s3KeyOriginal   String           @unique
+  // For HEIC inputs we convert to JPEG and store the result here.
+  // For JPG/PNG inputs this stays null and we serve the original.
+  s3KeyProcessed  String?
+  status          ImageStatus      @default(PENDING_UPLOAD)
+  rejectionReason RejectionReason?
+  // Free-form detail useful for debugging - e.g. "Laplacian variance: 42"
+  rejectionDetail String?
+  // 64-bit perceptual hash stored as a hex string. Indexed so duplicate-checks
+  // can scan the column quickly. Hamming-distance comparison is done in app code.
+  pHash           String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  // Listing queries always filter or sort by status + recency.
+  @@index([status, createdAt])
+  // Speeds up pHash scans during the similarity check.
+  @@index([pHash])
+}

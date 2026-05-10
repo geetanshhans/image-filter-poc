@@ -1,0 +1,40 @@
+# Local infra for Argon. Runs only Postgres + Redis.
+# The API and web app run on the host via `npm run dev` so hot reload works naturally.
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: argon-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: argon
+      POSTGRES_PASSWORD: argon_dev_password
+      POSTGRES_DB: argon
+    ports:
+      - "5432:5432"
+    volumes:
+      - argon-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U argon -d argon"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: argon-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - argon-redis-data:/data
+    # AOF persistence so streams survive a restart during dev
+    command: ["redis-server", "--appendonly", "yes"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  argon-postgres-data:
+  argon-redis-data:

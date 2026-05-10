@@ -1,0 +1,32 @@
+{
+  "name": "argon",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Bulk image upload with face/blur/similarity validation",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm-run-all --parallel dev:api dev:worker dev:web",
+    "dev:api": "npm run dev --workspace=@argon/api",
+    "dev:web": "npm run dev --workspace=@argon/web",
+    "dev:worker": "npm run dev:worker --workspace=@argon/api",
+    "build": "npm run build --workspaces --if-present",
+    "infra:up": "docker compose up -d",
+    "infra:down": "docker compose down",
+    "infra:logs": "docker compose logs -f",
+    "db:migrate": "npm run db:migrate --workspace=@argon/api",
+    "db:reset": "npm run db:reset --workspace=@argon/api",
+    "fetch-models": "npm run fetch-models --workspace=@argon/api",
+    "test": "bun --filter=@argon/api run test"
+  },
+  "devDependencies": {
+    "npm-run-all": "^4.1.5",
+    "typescript": "^5.5.4"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  }
+}
