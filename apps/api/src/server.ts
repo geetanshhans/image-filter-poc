@@ -10,12 +10,22 @@ import { createApp } from "./app.js";
 import { env } from "./config/env.js";
 import { logger } from "./lib/logger.js";
 import { connectRedis } from "./lib/redis.js";
-import { ensureConsumerGroup } from "./queue/producer.js";
+import {
+  ensureCompressGroup,
+  ensureConsumerGroup,
+  ensureConvertGroup,
+  ensureVariantsGroup,
+} from "./queue/producer.js";
 import { attachWebSocket } from "./ws/server.js";
 
 async function main(): Promise<void> {
   await connectRedis();
+  // Create groups (idempotent) so producers - including the reprocess endpoint
+  // and the upload completion handler - can XADD even before workers boot.
   await ensureConsumerGroup();
+  await ensureConvertGroup();
+  await ensureCompressGroup();
+  await ensureVariantsGroup();
 
   const app = createApp();
   const httpServer = createServer(app);

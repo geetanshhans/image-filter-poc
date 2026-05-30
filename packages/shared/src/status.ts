@@ -9,6 +9,18 @@ export const ImageStatus = {
 } as const;
 export type ImageStatus = (typeof ImageStatus)[keyof typeof ImageStatus];
 
+// Pipeline stages an ACCEPTED image moves through. Distinct from ImageStatus
+// because validation and pipeline progress are independent concerns - an image
+// is ACCEPTED once validation passes, then the pipelineStage tracks the rest.
+export const PipelineStage = {
+  Converting: "CONVERTING",
+  Compressing: "COMPRESSING",
+  GeneratingVariants: "GENERATING_VARIANTS",
+  Complete: "COMPLETE",
+  Failed: "FAILED",
+} as const;
+export type PipelineStage = (typeof PipelineStage)[keyof typeof PipelineStage];
+
 export const RejectionReason = {
   SizeTooSmall: "SIZE_TOO_SMALL",
   ResolutionTooSmall: "RESOLUTION_TOO_SMALL",

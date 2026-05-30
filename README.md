@@ -146,6 +146,18 @@ Each stage:
 
 ### Load test
 
+Drop some images into `./fixtures/` first. The folder is git-ignored — populate it with your own photos, or use the one-liner in `fixtures/.gitkeep` to grab 15 AI-generated faces from `thispersondoesnotexist.com`:
+
+```bash
+for i in $(seq 1 15); do
+  curl -s -L -o "fixtures/face-$(printf '%02d' $i).jpg" \
+    https://thispersondoesnotexist.com/ -A "Mozilla/5.0"
+  sleep 1
+done
+```
+
+Then run:
+
 ```bash
 # Default: 20 jobs at concurrency 5, against http://localhost:4000, fixtures in ./fixtures
 npm run load-test

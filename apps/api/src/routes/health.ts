@@ -123,6 +123,7 @@ async function checkS3(): Promise<CheckResult> {
       accessKeyId: env.AWS_ACCESS_KEY_ID,
       secretAccessKey: env.AWS_SECRET_ACCESS_KEY,
     },
+    ...(env.S3_ENDPOINT ? { endpoint: env.S3_ENDPOINT, forcePathStyle: true } : {}),
   });
   // Unique key per probe so concurrent health checks don't fight each other.
   const probeKey = `argon/.healthcheck/${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;

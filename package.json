@@ -8,10 +8,14 @@
     "apps/*"
   ],
   "scripts": {
-    "dev": "npm-run-all --parallel dev:api dev:worker dev:web",
+    "dev": "npm-run-all --parallel dev:api dev:worker dev:worker:convert dev:worker:compress dev:worker:variants dev:web",
     "dev:api": "npm run dev --workspace=@argon/api",
     "dev:web": "npm run dev --workspace=@argon/web",
     "dev:worker": "npm run dev:worker --workspace=@argon/api",
+    "dev:worker:convert": "npm run dev:worker:convert --workspace=@argon/api",
+    "dev:worker:compress": "npm run dev:worker:compress --workspace=@argon/api",
+    "dev:worker:variants": "npm run dev:worker:variants --workspace=@argon/api",
+    "load-test": "tsx scripts/load-test.ts",
     "build": "npm run build --workspaces --if-present",
     "infra:up": "docker compose up -d",
     "infra:down": "docker compose down",
@@ -23,6 +27,7 @@
   },
   "devDependencies": {
     "npm-run-all": "^4.1.5",
+    "tsx": "^4.19.1",
     "typescript": "^5.5.4"
   },
   "engines": {

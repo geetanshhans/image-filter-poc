@@ -1,0 +1,16 @@
+Drop sample images here for the load test (`npm run load-test`).
+
+The load test reads everything in this folder that ends in `.jpg`, `.jpeg`,
+`.png`, `.heic`, or `.heif`. It uploads each one through the full pipeline
+and reports throughput + latency.
+
+Quick way to populate this folder with AI-generated faces (no API key needed):
+
+  for i in $(seq 1 15); do
+    curl -s -L -o "fixtures/face-$(printf '%02d' $i).jpg" \
+      https://thispersondoesnotexist.com/ -A "Mozilla/5.0"
+    sleep 1
+  done
+
+Any photos work — your own, Unsplash, etc. A mix of sizes (~500 KB to ~2 MB)
+and one HEIC gives the most realistic picture of pipeline throughput.

@@ -78,7 +78,7 @@ uploadsRouter.post(
             sizeBytes: file.sizeBytes,
             // Temporary placeholder. We rewrite this with the real key right
             // after creation since we need the row's id to build the path.
-            s3KeyOriginal: `pending-${Date.now()}-${index}`,
+            s3KeyOriginal: `pending-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 8)}`,
             status: ImageStatus.PendingUpload,
           },
         });

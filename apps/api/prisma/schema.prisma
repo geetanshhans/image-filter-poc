@@ -20,6 +20,16 @@ enum ImageStatus {
   REJECTED
 }
 
+// Stages an ACCEPTED image moves through: convert -> compress -> generate
+// variants -> complete. FAILED is terminal until reprocessed.
+enum PipelineStage {
+  CONVERTING
+  COMPRESSING
+  GENERATING_VARIANTS
+  COMPLETE
+  FAILED
+}
+
 enum RejectionReason {
   SIZE_TOO_SMALL
   RESOLUTION_TOO_SMALL
@@ -51,6 +61,27 @@ model Image {
   // 64-bit perceptual hash stored as a hex string. Indexed so duplicate-checks
   // can scan the column quickly. Hamming-distance comparison is done in app code.
   pHash           String?
+
+  // ----- Pipeline state (set after status transitions to ACCEPTED) -----
+  pipelineStage    PipelineStage?
+  // User-visible reason when pipelineStage = FAILED. Capped to 500 chars in code.
+  pipelineError    String?
+  convertedAt      DateTime?
+  compressedAt     DateTime?
+  completedAt      DateTime?
+
+  // Compressed artifact written by the compress stage.
+  s3KeyCompressed  String?
+  compressedBytes  Int?
+  // compressedBytes / sizeBytes - quick sanity stat surfaced in the UI.
+  compressionRatio Float?
+
+  // Variant set written by the variants stage. JSON shape:
+  //   { thumbnail: { key, width, height, bytes }, web: {...}, full: {...} }
+  // Kept as Json (not a separate table) because we always read all three
+  // together and there's no querying by variant fields.
+  variants         Json?
+
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
 
@@ -58,4 +89,6 @@ model Image {
   @@index([status, createdAt])
   // Speeds up pHash scans during the similarity check.
   @@index([pHash])
+  // Reconciler scans for stuck rows in non-terminal pipeline stages.
+  @@index([pipelineStage, updatedAt])
 }

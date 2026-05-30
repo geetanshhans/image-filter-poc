@@ -6,6 +6,7 @@
 import { Box, Button, IconButton, LinearProgress, Stack, Typography } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import MonitorHeartIcon from "@mui/icons-material/MonitorHeart";
+import AccountTreeIcon from "@mui/icons-material/AccountTree";
 import { UI_LIMITS } from "@argon/shared";
 
 interface Props {
@@ -60,6 +61,17 @@ export function TopBar({ acceptedCount }: Props) {
           }}
         />
       </Box>
+
+      <Button
+        size="small"
+        startIcon={<AccountTreeIcon />}
+        onClick={() => {
+          window.location.hash = "#/pipeline";
+        }}
+        sx={{ color: "text.secondary" }}
+      >
+        Pipeline
+      </Button>
 
       <Button
         size="small"

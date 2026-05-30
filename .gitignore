@@ -32,3 +32,11 @@ bun.lock
 
 # Claude Code
 .claude/
+
+# Personal demo recording notes - not part of the submission code
+DEMO_SCRIPT.md
+
+# Load test fixtures - users provide their own (see README). The fixtures dir
+# stays in the tree via .gitkeep so the load test has a target directory.
+fixtures/*
+!fixtures/.gitkeep

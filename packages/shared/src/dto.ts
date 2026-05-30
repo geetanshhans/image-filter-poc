@@ -2,7 +2,22 @@
 // so a renamed field becomes a compile error on whichever side hasn't been updated.
 
 import type { AllowedMimeType } from "./constants.js";
-import type { ImageStatus, RejectionReason } from "./status.js";
+import type { ImageStatus, PipelineStage, RejectionReason } from "./status.js";
+
+// One generated variant - presigned URL + dimensions + size for client display.
+export interface VariantInfo {
+  url: string;
+  width: number;
+  height: number;
+  bytes: number;
+}
+
+// Set of variants produced by the variants stage. Keys match the stage config.
+export interface VariantSet {
+  thumbnail: VariantInfo;
+  web: VariantInfo;
+  full: VariantInfo;
+}
 
 // ---------- Common ----------
 
@@ -18,6 +33,24 @@ export interface ImageDto {
   // Pre-signed GET URL for displaying the image. Null if the upload hasn't completed.
   previewUrl: string | null;
   createdAt: string;
+
+  // ----- Pipeline (populated after status = ACCEPTED) -----
+  // Current stage in the convert -> compress -> variants chain. Null until
+  // validation passes; FAILED when any stage permanently errors.
+  pipelineStage: PipelineStage | null;
+  // Surfaced to the user when pipelineStage = FAILED. Free-form short string.
+  pipelineError: string | null;
+  // Compressed file size / original size. Useful diagnostic for the UI.
+  compressionRatio: number | null;
+  compressedBytes: number | null;
+  // Only populated when pipelineStage = COMPLETE.
+  variants: VariantSet | null;
+}
+
+// ---------- POST /api/images/:id/reprocess ----------
+
+export interface ReprocessImageResponse {
+  image: ImageDto;
 }
 
 // ---------- POST /api/uploads/batch ----------

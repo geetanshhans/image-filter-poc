@@ -27,6 +27,20 @@ export const STREAMS = {
   validation: "argon:images:validation",
   validationGroup: "validators",
   validationDeadLetter: "argon:images:validation:dead",
+
+  // Pipeline stages. Each stage has its own stream + group so workers can
+  // scale independently and a backlog on one stage doesn't block the others.
+  convert: "argon:images:convert",
+  convertGroup: "converters",
+  convertDeadLetter: "argon:images:convert:dead",
+
+  compress: "argon:images:compress",
+  compressGroup: "compressors",
+  compressDeadLetter: "argon:images:compress:dead",
+
+  variants: "argon:images:variants",
+  variantsGroup: "variant-makers",
+  variantsDeadLetter: "argon:images:variants:dead",
 } as const;
 
 // Connect on demand. Called at server boot so we fail loudly if Redis is down.

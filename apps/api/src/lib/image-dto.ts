@@ -5,10 +5,14 @@ import type { Image } from "@prisma/client";
 import type {
   ImageDto,
   ImageStatus,
+  PipelineStage,
   RejectionReason,
+  VariantInfo,
+  VariantSet,
 } from "@argon/shared";
 import { isHeicMime } from "./heic.js";
 import { presignGetUrl } from "./s3.js";
+import type { StoredVariant, StoredVariantSet } from "../worker/variants/handler.js";
 
 // Returns the S3 key the browser should fetch for a preview, or null if no
 // renderable image exists yet. The order matters:
@@ -25,9 +29,36 @@ function previewS3Key(image: Image): string | null {
   return null;
 }
 
+// Convert the stored variant set (keys + dimensions) into the wire format
+// (presigned URLs + dimensions). Presigning happens on read because URLs
+// expire and we don't want to write expiring data to the DB.
+async function presignVariantSet(stored: StoredVariantSet): Promise<VariantSet> {
+  const sign = async (v: StoredVariant): Promise<VariantInfo> => ({
+    url: await presignGetUrl(v.key),
+    width: v.width,
+    height: v.height,
+    bytes: v.bytes,
+  });
+  // Run the three signs in parallel - saves a round-trip per variant.
+  const [thumbnail, web, full] = await Promise.all([
+    sign(stored.thumbnail),
+    sign(stored.web),
+    sign(stored.full),
+  ]);
+  return { thumbnail, web, full };
+}
+
 export async function toImageDto(image: Image): Promise<ImageDto> {
   const key = previewS3Key(image);
   const previewUrl = key ? await presignGetUrl(key) : null;
+
+  // Only sign variants when the pipeline is fully complete. Partial sets
+  // never reach the DB but the conditional is cheaper than the URL signing.
+  let variants: VariantSet | null = null;
+  if (image.variants && image.pipelineStage === "COMPLETE") {
+    variants = await presignVariantSet(image.variants as unknown as StoredVariantSet);
+  }
+
   return {
     id: image.id,
     originalName: image.originalName,
@@ -39,6 +70,11 @@ export async function toImageDto(image: Image): Promise<ImageDto> {
     rejectionReason: (image.rejectionReason as RejectionReason | null) ?? null,
     previewUrl,
     createdAt: image.createdAt.toISOString(),
+    pipelineStage: (image.pipelineStage as PipelineStage | null) ?? null,
+    pipelineError: image.pipelineError ?? null,
+    compressionRatio: image.compressionRatio ?? null,
+    compressedBytes: image.compressedBytes ?? null,
+    variants,
   };
 }
 

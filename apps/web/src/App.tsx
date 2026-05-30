@@ -3,6 +3,7 @@
 
 import { MainPage } from "./pages/MainPage";
 import { HealthPage } from "./pages/HealthPage";
+import { PipelinePage } from "./pages/PipelinePage";
 import { NotificationHost } from "./components/NotificationHost";
 import { useRoute } from "./hooks/use-route";
 
@@ -10,7 +11,9 @@ export function App() {
   const route = useRoute();
   return (
     <>
-      {route === "health" ? <HealthPage /> : <MainPage />}
+      {route === "health" && <HealthPage />}
+      {route === "pipeline" && <PipelinePage />}
+      {route === "main" && <MainPage />}
       <NotificationHost />
     </>
   );

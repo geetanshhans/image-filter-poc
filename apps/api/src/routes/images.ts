@@ -5,15 +5,18 @@ import { Router } from "express";
 import { z } from "zod";
 import {
   ImageStatus,
+  PipelineStage,
   type DeleteImageResponse,
   type GetImageResponse,
   type ListImagesResponse,
+  type ReprocessImageResponse,
 } from "@argon/shared";
 import { prisma } from "../db/prisma.js";
 import { asyncHandler } from "../middleware/async-handler.js";
 import { httpErrors } from "../lib/errors.js";
 import { toImageDto, toImageDtos } from "../lib/image-dto.js";
 import { deleteObjectIfExists } from "../lib/s3.js";
+import { enqueueConvert } from "../queue/producer.js";
 import { wsEmit } from "../ws/emitter.js";
 
 export const imagesRouter = Router();
@@ -104,6 +107,49 @@ imagesRouter.delete(
     wsEmit.imageDeleted({ imageId: id });
 
     const response: DeleteImageResponse = { success: true };
+    res.json(response);
+  }),
+);
+
+// --- POST /api/images/:id/reprocess --------------------------------------
+//
+// Re-enters the image into the processing pipeline. Useful after a stage has
+// FAILED (transient infra blip, or an env tweak that fixes a config issue).
+// Only ACCEPTED images can be reprocessed - rejected ones never entered the
+// pipeline in the first place. Idempotency guards in each stage handler make
+// the pipelineStage reset to CONVERTING safe even mid-run.
+imagesRouter.post(
+  "/:id/reprocess",
+  asyncHandler(async (req, res) => {
+    const id = z.string().uuid().parse(req.params.id);
+    const image = await prisma.image.findUnique({ where: { id } });
+    if (!image) throw httpErrors.notFound("IMAGE_NOT_FOUND", "Image not found");
+    if (image.status !== ImageStatus.Accepted) {
+      throw httpErrors.badRequest(
+        "NOT_ACCEPTED",
+        "Only accepted images can be reprocessed",
+      );
+    }
+
+    // Reset pipeline state and re-enqueue. We deliberately leave variants and
+    // s3KeyCompressed alone - the stage handlers overwrite them by the same
+    // deterministic S3 key, so a half-finished prior run still produces the
+    // same final artifacts.
+    const updated = await prisma.image.update({
+      where: { id },
+      data: {
+        pipelineStage: PipelineStage.Converting,
+        pipelineError: null,
+        // Reset timestamps so the pipeline progress UI updates as stages re-run.
+        convertedAt: null,
+        compressedAt: null,
+        completedAt: null,
+      },
+    });
+    await enqueueConvert({ imageId: id });
+    wsEmit.imageStatus({ image: await toImageDto(updated) });
+
+    const response: ReprocessImageResponse = { image: await toImageDto(updated) };
     res.json(response);
   }),
 );

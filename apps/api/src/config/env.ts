@@ -20,12 +20,15 @@ const EnvSchema = z.object({
   // Redis
   REDIS_URL: z.string().min(1, "REDIS_URL is required"),
 
-  // AWS S3
+  // AWS S3 / MinIO
   AWS_REGION: z.string().min(1, "AWS_REGION is required"),
   AWS_ACCESS_KEY_ID: z.string().min(1, "AWS_ACCESS_KEY_ID is required"),
   AWS_SECRET_ACCESS_KEY: z.string().min(1, "AWS_SECRET_ACCESS_KEY is required"),
   S3_BUCKET: z.string().min(1, "S3_BUCKET is required"),
   S3_PRESIGN_EXPIRES_SECONDS: z.coerce.number().int().positive().default(900),
+  // Optional: set to MinIO URL (e.g. http://localhost:9000) for local dev.
+  // When set, the client uses path-style addressing (required by MinIO).
+  S3_ENDPOINT: z.string().url().optional(),
 
   // Validation
   MIN_FILE_SIZE_BYTES: z.coerce.number().int().positive().default(51200),
@@ -38,6 +41,29 @@ const EnvSchema = z.object({
 
   // face-api
   FACE_API_MODELS_DIR: z.string().default("./models"),
+
+  // ---------- Pipeline ----------
+  // JPEG quality used by the compress stage. Lower = smaller files, more artifacts.
+  // 82 with mozjpeg matches the typical "high quality web" sweet spot.
+  COMPRESS_JPEG_QUALITY: z.coerce.number().int().min(1).max(100).default(82),
+  // Comma-separated widths in px for the variant stage, in thumbnail/web/full order.
+  // Three values required; resize is width-only with aspect preserved.
+  VARIANT_WIDTHS: z
+    .string()
+    .default("256,1280,2560")
+    .transform((s) => s.split(",").map((n) => parseInt(n.trim(), 10)))
+    .refine((arr) => arr.length === 3 && arr.every((n) => Number.isFinite(n) && n > 0), {
+      message: "VARIANT_WIDTHS must be three positive integers (thumbnail,web,full)",
+    }),
+  // JPEG quality for resized variants. A touch higher than compress because
+  // downsampling already removes detail and we want the small versions sharp.
+  VARIANT_JPEG_QUALITY: z.coerce.number().int().min(1).max(100).default(85),
+  // Reconciler interval (ms). Scans for rows stuck in non-terminal pipeline
+  // stages and re-enqueues them onto the appropriate stream.
+  RECONCILER_INTERVAL_MS: z.coerce.number().int().positive().default(60_000),
+  // Age threshold (ms) before the reconciler considers a row stuck. Must be
+  // longer than the slowest stage's normal duration to avoid false positives.
+  RECONCILER_STUCK_AFTER_MS: z.coerce.number().int().positive().default(300_000),
 });
 
 const parsed = EnvSchema.safeParse(process.env);

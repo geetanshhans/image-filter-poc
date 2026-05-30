@@ -13,6 +13,7 @@ import type {
   ImageDto,
   ImageStatus,
   ListImagesResponse,
+  ReprocessImageResponse,
 } from "@argon/shared";
 import { env } from "../config/env";
 
@@ -84,6 +85,21 @@ export const api = createApi({
     health: builder.query<HealthResponse, void>({
       query: () => "health",
     }),
+
+    // Re-enter an image into the processing pipeline. Used by the pipeline
+    // dashboard's Reprocess button on FAILED rows. Invalidates the image so
+    // the table re-fetches it as CONVERTING and the polling shows it advance.
+    reprocessImage: builder.mutation<ReprocessImageResponse, { imageId: string }>({
+      query: ({ imageId }) => ({
+        url: `images/${imageId}/reprocess`,
+        method: "POST",
+        body: {},
+      }),
+      invalidatesTags: (_result, _err, arg) => [
+        { type: TAG_IMAGES, id: arg.imageId },
+        { type: TAG_IMAGES, id: "LIST" },
+      ],
+    }),
   }),
 });
 
@@ -93,6 +109,7 @@ export const {
   useCompleteUploadMutation,
   useDeleteImageMutation,
   useHealthQuery,
+  useReprocessImageMutation,
 } = api;
 
 // Re-export the API slice's util for cache patching from outside React (we use

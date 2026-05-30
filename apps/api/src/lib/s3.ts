@@ -18,6 +18,11 @@ const s3 = new S3Client({
     accessKeyId: env.AWS_ACCESS_KEY_ID,
     secretAccessKey: env.AWS_SECRET_ACCESS_KEY,
   },
+  // When S3_ENDPOINT is set (e.g. MinIO for local dev), point the client there.
+  // forcePathStyle is required by MinIO - it doesn't support virtual-hosted buckets.
+  ...(env.S3_ENDPOINT
+    ? { endpoint: env.S3_ENDPOINT, forcePathStyle: true }
+    : {}),
 });
 
 // All S3 keys live under one prefix so the bucket can be shared with other apps
@@ -26,12 +31,26 @@ const KEY_PREFIX = "argon/uploads";
 
 // Build keys in one place. Paths show the image id so the same image's original
 // and processed variants are colocated in the bucket listing.
+// Variant names produced by the variants stage. Order matters: it must align
+// with env.VARIANT_WIDTHS (thumbnail, web, full).
+export const VARIANT_NAMES = ["thumbnail", "web", "full"] as const;
+export type VariantName = (typeof VARIANT_NAMES)[number];
+
 export const s3Keys = {
   original(imageId: string, extension: string): string {
     return `${KEY_PREFIX}/${imageId}/original.${extension.toLowerCase()}`;
   },
   processed(imageId: string, extension: string): string {
     return `${KEY_PREFIX}/${imageId}/processed.${extension.toLowerCase()}`;
+  },
+  // Output of the compress stage. Always JPEG, so no extension parameter.
+  compressed(imageId: string): string {
+    return `${KEY_PREFIX}/${imageId}/compressed.jpg`;
+  },
+  // One key per variant size. Kept under a /variants/ folder for clarity in the
+  // bucket listing and easy lifecycle-rule targeting later.
+  variant(imageId: string, name: VariantName): string {
+    return `${KEY_PREFIX}/${imageId}/variants/${name}.jpg`;
   },
 };
 
